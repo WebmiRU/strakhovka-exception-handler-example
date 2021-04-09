@@ -2,8 +2,13 @@
 
 namespace App\Exceptions;
 
+use App\Contracts\DriverExceptionContract;
+use App\Http\Resources\ExceptionResource;
 use Exception;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 
 class Handler extends ExceptionHandler
 {
@@ -29,7 +34,7 @@ class Handler extends ExceptionHandler
     /**
      * Report or log an exception.
      *
-     * @param  \Exception  $exception
+     * @param Exception $exception
      * @return void
      */
     public function report(Exception $exception)
@@ -40,12 +45,36 @@ class Handler extends ExceptionHandler
     /**
      * Render an exception into an HTTP response.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Exception  $exception
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @param Exception $exception
+     * @return Response
      */
-    public function render($request, Exception $exception)
+    public function render($request, Exception $e)
     {
-        return parent::render($request, $exception);
+        if ($e instanceof DriverExceptionContract) {
+            /**
+             * Да, мне лень форматировать лог, я думаю и так всем понятно (должно быть), что тут происходит
+             */
+            Log::error(sprintf("Achtung!! %s %s %s %s %s %s",
+                $e->getMessage(),
+                $e->getCode(),
+                $e->additionalData,
+                $e->getClass(),
+                $e->getFile(),
+                $e->getLine()
+            ));
+
+            /**
+             * И да, содержимое ресурса тоже было придумано "от балды", просто для ПРИМЕРА
+             */
+            return new ExceptionResource([
+                'message' => $e->getMessage(),
+                'class' => $e->getClass(),
+                'code' => $e->getCode(),
+            ]);
+        } else {
+            // Это оставил просто для совместимости, можно удалить
+            return parent::render($request, $e);
+        }
     }
 }
